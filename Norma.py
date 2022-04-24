@@ -26,68 +26,60 @@ import statsmodels.api as sm
 import pylab as py
 
 
-def generate_excel_download_link(df):
-    towrite = BytesIO()
-    df.to_excel(towrite, encoding="utf-8", index=False, header=True)  
-    towrite.seek(0)  
-    b64 = base64.b64encode(towrite.read()).decode()
-    href = f'<a href="data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,{b64}" download="data_download.xlsx">Download Excel File</a>'
-    return st.markdown(href, unsafe_allow_html=True)
-
-def generate_html_download_link(fig):
-    towrite = StringIO()
-    fig.write_html(towrite, include_plotlyjs="cdn")
-    towrite = BytesIO(towrite.getvalue().encode())
-    b64 = base64.b64encode(towrite.read()).decode()
-    href = f'<a href="data:text/html;charset=utf-8;base64, {b64}" download="plot.html">Download Plot</a>'
-    return st.markdown(href, unsafe_allow_html=True)
-
-
 st.set_page_config(page_title='Norma, The Normality Assessment Tool')
-st.sidebar.title('Norma 📈')
-st.sidebar.subheader('Please select the Excel file')
+st.title('Norma 📈')
+st.subheader('Please select the Excel file')
 
+    # -- File Uploader
 
-uploaded_file = st.sidebar.file_uploader('Please select the Excel file', type='xlsx')
+uploaded_file = st.file_uploader('Please select the Excel file', type='xlsx')
 if uploaded_file:
 
     df = pd.read_excel(uploaded_file, engine='openpyxl')
     df_t = df.select_dtypes(include= 'object')
-
     df_c = df.drop([col for col in df.columns if col in df.columns and col in df_t.columns], axis=1)
 
     
-    # -- BUTTON
+    # -- Selecting Variable
+    
     list1 = df_c.columns.values.tolist()
-    button1 = st.sidebar.radio("Which variable do you want to analyze?", (list1))
+    
+    button1 = st.radio("Which variable do you want to analyze?", (list1))
     
     new_df = df_c[button1].dropna()
     
+    st.markdown("""---""")
     
-    std = statistics.stdev(new_df) 
-    mu = statistics.mean(new_df) 
+    # -- Centeral Tendency Indices
+    
+    std = statistics.stdev(new_df)
     std = "{:.3f}".format(std)
-    mu = "{:.3f}".format(mu)
     std = float(std)
+    
+    mu = statistics.mean(new_df)     
+    mu = "{:.3f}".format(mu)    
     mu = float(mu)    
+    
     st.write('Mean:', mu,
              'Standard Deviation:', std,
              'Sample Size:', len(new_df))
     
+    st.markdown("""---""")
+    
+    # -- Alpha
     
     alpha = st.number_input('Insert value of the alpha:', min_value=0.00, max_value=1.00, value=0.05, help='Between 0 and 1')
 
+    st.markdown("""---""")    
+
+    # -- Normality Tests
+    
     st.subheader('Results of Tests of Normality:')
    
     col1, col2 = st.columns(2)
     
-    
-    
-    # -- NORMALITY TESTS
-
     with col1:
         
-
         ssw, psw = shapiro(new_df)
         ssw = "{:.3f}".format(ssw)
         psw = "{:.5f}".format(psw)
@@ -136,6 +128,7 @@ if uploaded_file:
             st.write('❌ Sample does NOT look Normal (rejected H0)') 
         st.write('')
         st.write('') 
+
 
         res = stats.cramervonmises(new_df, 'norm')
         scvm, pcvm = res.statistic, res.pvalue
@@ -209,6 +202,10 @@ if uploaded_file:
         st.write('')
         st.write('') 
         
+    st.markdown("""---""")
+             
+    # -- Skewness and Kurtosis Indices    
+        
     st.subheader('Skewness and Kurtosis Indices:')
     std = statistics.stdev(new_df) 
     mu = statistics.mean(new_df) 
@@ -248,13 +245,16 @@ if uploaded_file:
     st.write('')
     st.write('')
     
+    st.markdown("""---""")
+    
+    # -- Graphs
+        
     st.subheader('Graphs:')
     
     bins = st.number_input('Insert the number of groups for the histogram:', min_value=0, max_value=100, value=10, help='A non negative number')
 
-        
-
-        # Plot the histogram.
+    # -- Histogram
+    
     fig, ax = plt.subplots()
     ax.hist(new_df, bins=bins, density=True)
     plt.show() 
@@ -264,14 +264,19 @@ if uploaded_file:
     plt.show()
     st.subheader('Histogram:')
     st.pyplot(fig, ncur)
+    
+    st.markdown("""---""")
 
-
+    # -- QQ Plot
 
     qq = sm.qqplot(new_df, line='45', fit=True, dist=stats.norm)
     plt.show()
     st.subheader('Q-Q Plot:')
     st.pyplot(qq)
     
+    st.markdown("""---""")
+    
+    # -- Box Plot
     
     box = plt.figure(figsize =(10, 7))
     plt.boxplot(new_df)
@@ -279,6 +284,9 @@ if uploaded_file:
     st.subheader('Box Plot:')
     st.pyplot(box)
     
+    st.markdown("""---""")
+    
+    # -- End
     
     st.write('Any problems with Norma? Feel free to contact me at: kasra.j1218  [at]  gmail  [dot]  com')
     
